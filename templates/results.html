@@ -28,7 +28,14 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
           <div>
             <h1>Results</h1>
-            <div class="sub">Building: <b>{{ building }}</b> · Date: <b>{{ date }}</b> · Time: <b>{{ start_time }}</b> → <b>{{ end_time }}</b></div>
+            <div class="sub">
+              Building: <b>{{ building }}</b> · Date: <b>{{ date }}</b> · 
+              {% if flexible_mode %}
+                Find <b>{{ duration }}h</b> slot between <b>{{ start_time }}</b> and <b>{{ end_time }}</b>
+              {% else %}
+                Time: <b>{{ start_time }}</b> → <b>{{ end_time }}</b>
+              {% endif %}
+            </div>
           </div>
           <div><a href="{{ url_for('index') }}" class="btn">← New search</a></div>
         </div>
@@ -42,6 +49,9 @@
               <tr>
                 <th style="width:20%">Room</th>
                 <th style="width:15%">Seats</th>
+                {% if flexible_mode %}
+                  <th style="width:30%">Available Slots</th>
+                {% endif %}
                 <th>Link</th>
               </tr>
             </thead>
@@ -50,6 +60,9 @@
                 <tr>
                   <td>{{ r.name }}</td>
                   <td>{{ r.seats }}</td>
+                  {% if flexible_mode %}
+                    <td>{{ r.slots|join(', ') }}</td>
+                  {% endif %}
                   <td><a href="{{ r.url }}" target="_blank" style="color:#22d3ee">Open calendar ↗</a></td>
                 </tr>
               {% endfor %}

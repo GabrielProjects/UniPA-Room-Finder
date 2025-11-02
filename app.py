@@ -1,8 +1,8 @@
 import os
 import re
 import time
-from datetime import datetime
-from typing import Dict, List, Tuple
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple, Optional
 
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -178,6 +178,48 @@ def find_available_rooms(building_text: str, user_start: datetime, user_end: dat
     return available
 
 
+def find_flexible_slots(
+    building_text: str, range_start: datetime, range_end: datetime, duration_hours: float
+) -> Dict[str, Tuple[str, str, List[Tuple[datetime, datetime]]]]:
+    """
+    Find rooms with ANY available slot of `duration_hours` within [range_start, range_end].
+    Returns: {room_name: (seats, url, [(slot_start, slot_end), ...])}
+    """
+    rooms = get_rooms_for_building(building_text)
+    duration_delta = timedelta(hours=duration_hours)
+
+    results: Dict[str, Tuple[str, str, List[Tuple[datetime, datetime]]]] = {}
+
+    for room_name, (seats, url) in rooms.items():
+        try:
+            resp = requests.get(url, timeout=15)
+            if resp.status_code != 200:
+                continue
+            events = parse_events_from_html(resp.text)
+
+            # Find all free slots of the required duration
+            free_slots: List[Tuple[datetime, datetime]] = []
+            current = range_start
+
+            while current + duration_delta <= range_end:
+                slot_end = current + duration_delta
+                if is_room_free(events, current, slot_end):
+                    free_slots.append((current, slot_end))
+                    # Jump to end of this slot to avoid overlapping results
+                    current = slot_end
+                else:
+                    # Move forward by 30 min intervals
+                    current += timedelta(minutes=30)
+
+            if free_slots:
+                results[room_name] = (seats, url, free_slots)
+
+        except Exception:
+            continue
+
+    return results
+
+
 # ====== Flask routes ======
 
 _cached_buildings: List[str] = []
@@ -206,6 +248,8 @@ def search():
         date_str = request.form.get("date", "").strip()
         start_time = request.form.get("start_time", "").strip()
         end_time = request.form.get("end_time", "").strip()
+        flexible_mode = request.form.get("flexible_mode") == "1"
+        duration_str = request.form.get("duration", "2").strip()
 
         if not (building and date_str and start_time and end_time):
             flash("Please fill in all fields.", "error")
@@ -217,25 +261,65 @@ def search():
             flash("End time must be after start time.", "error")
             return redirect(url_for("index"))
 
-        available = find_available_rooms(building, user_start, user_end)
+        if flexible_mode:
+            try:
+                duration_hours = float(duration_str)
+                if duration_hours <= 0:
+                    raise ValueError
+            except ValueError:
+                flash("Invalid duration value.", "error")
+                return redirect(url_for("index"))
 
-        # Sort by room name
-        sorted_items = sorted(available.items(), key=lambda kv: kv[0])
-        result = [
-            {"name": name, "seats": seats, "url": url}
-            for name, (seats, url) in sorted_items
-        ]
+            # Find flexible slots
+            results_dict = find_flexible_slots(building, user_start, user_end, duration_hours)
 
-        return render_template(
-            "results.html",
-            title=APP_TITLE,
-            building=building,
-            date=date_str,
-            start_time=start_time,
-            end_time=end_time,
-            results=result,
-            total=len(result),
-        )
+            # Format for template
+            result = []
+            for name, (seats, url, slots) in sorted(results_dict.items(), key=lambda kv: kv[0]):
+                slot_strings = [
+                    f"{s.strftime('%H:%M')}–{e.strftime('%H:%M')}" for s, e in slots
+                ]
+                result.append({
+                    "name": name,
+                    "seats": seats,
+                    "url": url,
+                    "slots": slot_strings,
+                })
+
+            return render_template(
+                "results.html",
+                title=APP_TITLE,
+                building=building,
+                date=date_str,
+                start_time=start_time,
+                end_time=end_time,
+                flexible_mode=True,
+                duration=duration_hours,
+                results=result,
+                total=len(result),
+            )
+        else:
+            # Exact time search
+            available = find_available_rooms(building, user_start, user_end)
+
+            # Sort by room name
+            sorted_items = sorted(available.items(), key=lambda kv: kv[0])
+            result = [
+                {"name": name, "seats": seats, "url": url}
+                for name, (seats, url) in sorted_items
+            ]
+
+            return render_template(
+                "results.html",
+                title=APP_TITLE,
+                building=building,
+                date=date_str,
+                start_time=start_time,
+                end_time=end_time,
+                flexible_mode=False,
+                results=result,
+                total=len(result),
+            )
 
     except Exception as e:
         flash(f"Search failed: {e}", "error")
