@@ -26,24 +26,3 @@ python app.py
 ```
 
 Then open http://127.0.0.1:5000 in your browser.
-
-## Deploy on Render (via GitHub)
-
-1. Push this folder to a new GitHub repository (for example, `unipa-room-finder`).
-2. Go to https://render.com and create a free account.
-3. Create a New Web Service and connect your GitHub repo.
-4. Render will detect `render.yaml` and prefill settings:
-	- Environment: Python
-	- Build command: `pip install -r requirements.txt`
-	- Start command: `gunicorn app:app`
-	- Plan: Free, Region: Frankfurt (or your nearest)
-5. Click Create Web Service. After the build, you’ll get a public URL everyone can use.
-
-Notes:
-- The service runs behind Gunicorn and will execute the same logic as local.
-- You don’t need to change app code for Render; the `render.yaml` handles commands.
-
-## Notes
-- First load may take a few seconds while Selenium fetches building options.
-- If Chrome is not installed or blocked, Selenium may fail to start. Install Chrome and retry.
-- This app makes live requests to the Unipa site; performance depends on network speed and the site's responsiveness.
