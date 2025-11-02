@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }} – Results</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#94a3b8;--accent:#22d3ee;--btn:#2563eb}
+      *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#0b1220,#0a0f1a);color:var(--text)}
+      .wrap{max-width:980px;margin:40px auto;padding:0 16px}
+      .card{background:rgba(17,24,39,.8);backdrop-filter:blur(6px);border:1px solid #1f2937;border-radius:16px;padding:24px}
+      h1{font-size:22px;margin:0 0 4px;color:#f3f4f6}
+      .sub{color:#9ca3af;margin:0 0 16px}
+      a.btn{display:inline-block;padding:10px 14px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#22d3ee);color:white;text-decoration:none;font-weight:600}
+      table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:16px}
+      th{font-size:12px;text-align:left;color:#9ca3af;padding:4px 8px}
+      td{background:#0b1220;border:1px solid #1f2937;padding:10px 12px;color:#e5e7eb}
+      td:first-child{border-top-left-radius:10px;border-bottom-left-radius:10px}
+      td:last-child{border-top-right-radius:10px;border-bottom-right-radius:10px}
+      .empty{padding:12px 0;color:#94a3b8}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div>
+            <h1>Results</h1>
+            <div class="sub">Building: <b>{{ building }}</b> · Date: <b>{{ date }}</b> · Time: <b>{{ start_time }}</b> → <b>{{ end_time }}</b></div>
+          </div>
+          <div><a href="{{ url_for('index') }}" class="btn">← New search</a></div>
+        </div>
+
+        {% if total == 0 %}
+          <div class="empty">No rooms available for the selected slot.</div>
+        {% else %}
+          <div class="sub" style="margin-top:8px">Found {{ total }} room(s).</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:20%">Room</th>
+                <th style="width:15%">Seats</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in results %}
+                <tr>
+                  <td>{{ r.name }}</td>
+                  <td>{{ r.seats }}</td>
+                  <td><a href="{{ r.url }}" target="_blank" style="color:#22d3ee">Open calendar ↗</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>

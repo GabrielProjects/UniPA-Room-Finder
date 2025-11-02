@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+
+# Environments
+.venv/
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# Selenium / Chrome artifacts
+chromedriver.log
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

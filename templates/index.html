@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#94a3b8;--accent:#22d3ee;--btn:#2563eb}
+      *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#0b1220,#0a0f1a);color:var(--text)}
+      .wrap{max-width:860px;margin:40px auto;padding:0 16px}
+      .card{background:rgba(17,24,39,.8);backdrop-filter:blur(6px);border:1px solid #1f2937;border-radius:16px;padding:24px}
+      h1{font-size:24px;margin:0 0 16px;color:#f3f4f6}
+      p{color:var(--muted);margin:0 0 16px}
+      form{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+      label{font-size:13px;color:#cbd5e1;margin-bottom:6px;display:block}
+      input, select{width:100%;padding:10px 12px;background:#0b1220;border:1px solid #1f2937;border-radius:10px;color:#e5e7eb}
+      .row{display:flex;gap:16px}
+      .full{grid-column:1 / -1}
+      .actions{display:flex;gap:12px;align-items:center;margin-top:8px}
+      button{background:linear-gradient(135deg,#2563eb,#22d3ee);border:none;color:white;padding:12px 16px;border-radius:10px;font-weight:600;cursor:pointer}
+      button:disabled{opacity:.6;cursor:not-allowed}
+      .note{font-size:12px;color:#9ca3af}
+      .flash{padding:12px 14px;background:#7f1d1d;color:#fecaca;border:1px solid #ef4444;border-radius:10px;margin-bottom:14px}
+      footer{margin-top:18px;font-size:12px;color:#94a3b8;text-align:center}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>🔎 {{ title }}</h1>
+        <p>Find free rooms between your times. Data comes from the official Unipa calendar.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('search') }}">
+          <div class="full">
+            <label for="building">Building</label>
+            <select id="building" name="building" required>
+              <option value="" disabled selected>Select a building</option>
+              {% for b in buildings %}
+                <option value="{{ b }}">{{ b }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label for="date">Date</label>
+            <input id="date" type="date" name="date" required />
+          </div>
+          <div>
+            <label for="start_time">Start time</label>
+            <input id="start_time" type="time" name="start_time" required />
+          </div>
+          <div>
+            <label for="end_time">End time</label>
+            <input id="end_time" type="time" name="end_time" required />
+          </div>
+
+          <div class="actions full">
+            <button type="submit">Search available rooms</button>
+            <span class="note">First load may take a few seconds while we fetch options.</span>
+          </div>
+        </form>
+
+        <footer>Tip: Times use 24-hour format. Example: 14:00 to 16:30.</footer>
+      </div>
+    </div>
+  </body>
+</html>
