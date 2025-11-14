@@ -30,6 +30,8 @@ def _build_driver() -> webdriver.Chrome:
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-images")  # Don't load images (saves memory)
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-setuid-sandbox")
     
     # Only apply these on Linux (not Windows)
     if os.name != "nt":
@@ -37,8 +39,21 @@ def _build_driver() -> webdriver.Chrome:
         options.add_argument("--disable-features=VizDisplayCompositor")
         options.add_argument("--single-process")  # Only on Linux containers
         options.add_argument("--max_old_space_size=128")
+        options.add_argument("--disable-background-networking")
+        options.add_argument("--disable-background-timer-throttling")
+        options.add_argument("--disable-backgrounding-occluded-windows")
+        options.add_argument("--disable-breakpad")
+        options.add_argument("--disable-component-extensions-with-background-pages")
+        options.add_argument("--disable-features=TranslateUI")
+        options.add_argument("--disable-ipc-flooding-protection")
+        options.add_argument("--disable-renderer-backgrounding")
+        options.add_argument("--enable-features=NetworkService,NetworkServiceInProcess")
+        options.add_argument("--force-color-profile=srgb")
+        options.add_argument("--metrics-recording-only")
+        options.add_argument("--mute-audio")
     
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
     
     # Block resource-heavy content
     prefs = {
@@ -58,7 +73,11 @@ def _build_driver() -> webdriver.Chrome:
     service = Service(log_path=log_path)
 
     driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(30)  # Shorter timeout
+    driver.set_page_load_timeout(30)
+    
+    # Set window size to reduce memory
+    driver.set_window_size(1024, 768)
+    
     return driver
 
 
