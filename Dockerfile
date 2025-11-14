@@ -1,33 +1,21 @@
-# Use a minimal Python image (Alpine is smaller but Chrome is problematic)
+# Use a minimal Python image
 FROM python:3.11-slim
 
-# Install only essential dependencies for Chrome
+# Install essential dependencies for Chrome
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    wget \
     gnupg \
     ca-certificates \
     libnss3 \
-    libgconf-2-4 \
     libxss1 \
-    libxtst6 \
-    libxrandr2 \
+    libgbm1 \
     libasound2 \
-    libpangocairo-1.0-0 \
-    libatk1.0-0 \
-    libcairo-gobject2 \
-    libgtk-3-0 \
-    libgdk-pixbuf2.0-0 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxi6 \
-    libxrender1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install lightweight Chrome (without unnecessary packages)
-RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-linux-signing-keyring.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-signing-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+# Install Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends google-chrome-stable \
     && apt-get clean \
