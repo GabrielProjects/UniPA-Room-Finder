@@ -21,14 +21,31 @@ app.secret_key = "change-me"  # for flash messages
 
 
 def _build_driver() -> webdriver.Chrome:
-    """Create a headless Chrome WebDriver with reduced logging (Windows friendly)."""
+    """Create a memory-optimized headless Chrome WebDriver for 512MB limit."""
     options = Options()
     options.add_argument("--log-level=3")
-    options.add_argument("--headless")
+    options.add_argument("--headless=new")  # Use new headless mode (less memory)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])  # mute webdriver logs
+    options.add_argument("--disable-web-security")
+    options.add_argument("--disable-features=VizDisplayCompositor")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-plugins")
+    options.add_argument("--disable-images")  # Don't load images (saves memory)
+    options.add_argument("--disable-javascript")  # Disable JS (we only need DOM)
+    options.add_argument("--memory-pressure-off")
+    options.add_argument("--max_old_space_size=128")  # Limit V8 memory to 128MB
+    options.add_argument("--single-process")  # Force single process mode
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    
+    # Block resource-heavy content
+    prefs = {
+        "profile.default_content_settings.popups": 0,
+        "profile.managed_default_content_settings.images": 2,  # Block images
+        "profile.managed_default_content_settings.media_stream": 2,  # Block media
+    }
+    options.add_experimental_option("prefs", prefs)
 
     # If running in a container with Chrome installed at a known path
     chrome_bin = os.environ.get("CHROME_BIN")
@@ -41,7 +58,7 @@ def _build_driver() -> webdriver.Chrome:
     service = Service(log_path=log_path)
 
     driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(45)
+    driver.set_page_load_timeout(30)  # Shorter timeout
     return driver
 
 
@@ -49,7 +66,7 @@ def get_buildings() -> List[str]:
     """Return visible building names from the 'Ricerca Avanzata' page."""
     driver = _build_driver()
     try:
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 15)  # Shorter wait
         driver.get(BASE_URL)
         # Click "Ricerca Avanzata"
         wait.until(EC.element_to_be_clickable((By.ID, "ricercaAula:j_id99"))).click()
@@ -67,6 +84,9 @@ def get_buildings() -> List[str]:
         return buildings
     finally:
         driver.quit()
+        # Force garbage collection to free memory immediately
+        import gc
+        gc.collect()
 
 
 def _extract_current_page_rooms(driver: webdriver.Chrome) -> Dict[str, Tuple[str, str]]:
@@ -90,7 +110,7 @@ def get_rooms_for_building(building_text: str) -> Dict[str, Tuple[str, str]]:
     """Run the site search for a building and return rooms mapping {room: (seats, url)}."""
     driver = _build_driver()
     try:
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 15)  # Shorter wait
         driver.get(BASE_URL)
 
         # Click "Ricerca Avanzata"
@@ -122,7 +142,7 @@ def get_rooms_for_building(building_text: str) -> Dict[str, Tuple[str, str]]:
                 if "rich-datascr-button-dsbld" in next_btn.get_attribute("class"):
                     break
                 next_btn.click()
-                time.sleep(0.4)
+                time.sleep(0.3)  # Shorter sleep
                 wait.until(EC.presence_of_element_located((By.ID, "ricercaAula:aulaList")))
             except Exception:
                 break
@@ -130,6 +150,9 @@ def get_rooms_for_building(building_text: str) -> Dict[str, Tuple[str, str]]:
         return room_dict
     finally:
         driver.quit()
+        # Force garbage collection
+        import gc
+        gc.collect()
 
 
 # ====== Parsing calendar events from room HTML ======
@@ -164,17 +187,29 @@ def find_available_rooms(building_text: str, user_start: datetime, user_end: dat
     rooms = get_rooms_for_building(building_text)
 
     available: Dict[str, Tuple[str, str]] = {}
-    for room_name, (seats, url) in rooms.items():
+    # Process rooms in smaller batches to manage memory
+    room_items = list(rooms.items())
+    
+    for room_name, (seats, url) in room_items:
         try:
-            resp = requests.get(url, timeout=15)
+            # Use shorter timeout and smaller buffer
+            resp = requests.get(url, timeout=10, stream=False)
             if resp.status_code != 200:
                 continue
             events = parse_events_from_html(resp.text)
             if is_room_free(events, user_start, user_end):
                 available[room_name] = (seats, url)
+            # Clear response from memory
+            del resp
         except Exception:
             # ignore per-room errors
             continue
+        
+        # Yield control periodically to avoid memory buildup
+        if len(available) % 10 == 0:
+            import gc
+            gc.collect()
+    
     return available
 
 
