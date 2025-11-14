@@ -39,8 +39,8 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Expose port for Render/containers
-ENV PORT=8000
-EXPOSE 8000
+EXPOSE 10000
 
 # Use only 1 worker to minimize memory usage on 512MB limit
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:8000", "--workers", "1", "--timeout", "180", "--max-requests", "100", "--max-requests-jitter", "50", "--preload"]
+# Bind to 0.0.0.0:$PORT (Render sets PORT env var)
+CMD gunicorn app:app --bind 0.0.0.0:${PORT:-10000} --workers 1 --timeout 180 --max-requests 100 --max-requests-jitter 50 --preload
