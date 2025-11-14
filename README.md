@@ -86,33 +86,7 @@ VITE_API_URL=http://localhost:3000/api
 
 ## 🚀 Deploy
 
-### Frontend (GitHub Pages)
-
-Il frontend viene deployato automaticamente su GitHub Pages tramite GitHub Actions quando si fa push su `main`.
-
-1. Vai su Settings > Pages nel tuo repository GitHub
-2. Seleziona "GitHub Actions" come source
-3. Il workflow `.github/workflows/deploy.yml` si occuperà del deploy
-
-### Backend (Railway - Raccomandato)
-
-**Opzione 1: Render.com** (Raccomandato - Gratuito, Nessuna Carta)
-- ✅ Completamente gratuito senza carta di credito
-- ✅ Deploy automatico da GitHub
-- ✅ Configurazione automatica con `render.yaml`
-- ⚠️ Cold start dopo 15 min di inattività (normale per servizi gratuiti)
-- 📖 **Guida rapida**: Vedi [QUICKSTART_RENDER.md](QUICKSTART_RENDER.md)
-- 📖 **Guida dettagliata**: Vedi [DEPLOY.md](DEPLOY.md)
-
-**Opzione 2: Railway**
-- ✅ Gratuito con $5 crediti/mese
-- ✅ Nessun limite di timeout
-- ⚠️ Richiede carta di credito (anche se gratuito)
-- 📖 Vedi [QUICKSTART_RAILWAY.md](QUICKSTART_RAILWAY.md) o [DEPLOY_RAILWAY.md](DEPLOY_RAILWAY.md)
-
-**Opzione 3: Vercel**
-- ⚠️ Timeout limitato (10s free, 60s pro) - può essere insufficiente per scraping
-- 📖 Vedi [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md) per istruzioni
+`https://unipa-room-finder.onrender.com`
 
 ## 📁 Struttura Progetto
 
