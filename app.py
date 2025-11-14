@@ -109,7 +109,7 @@ def get_buildings() -> List[str]:
 
 
 def _extract_current_page_rooms(driver: webdriver.Chrome) -> Dict[str, Tuple[str, str]]:
-    """Given the current results table page, return room_dict {name: (seats, link)}."""
+    """Given the current results table page, return room_dict {name: (seats, link)}."""    
     room_dict: Dict[str, Tuple[str, str]] = {}
     rows = driver.find_elements(By.CSS_SELECTOR, "#ricercaAula\\:aulaList tbody tr")
     for row in rows:
@@ -119,12 +119,10 @@ def _extract_current_page_rooms(driver: webdriver.Chrome) -> Dict[str, Tuple[str
             seats = cols[1].text.strip()
             link = cols[0].find_element(By.TAG_NAME, "a").get_attribute("href")
 
-            # Filter: Only LETTER+3DIGITS and seats > 0
-            if re.match(r"^[A-Z]\d{3}$", room_name) and seats != "0":
+            # Include all rooms with seats > 0
+            if seats and seats != "0" and room_name:
                 room_dict[room_name] = (seats, link)
     return room_dict
-
-
 def get_rooms_for_building(building_text: str) -> Dict[str, Tuple[str, str]]:
     """Run the site search for a building and return rooms mapping {room: (seats, url)}."""
     driver = _build_driver()
@@ -327,18 +325,22 @@ def search():
             # Find flexible slots
             results_dict = find_flexible_slots(building, user_start, user_end, duration_hours)
 
-            # Format for template
+            # Format for template and sort by seats (descending)
             result = []
-            for name, (seats, url, slots) in sorted(results_dict.items(), key=lambda kv: kv[0]):
+            for name, (seats, url, slots) in results_dict.items():
                 slot_strings = [
                     f"{s.strftime('%H:%M')}–{e.strftime('%H:%M')}" for s, e in slots
                 ]
                 result.append({
                     "name": name,
-                    "seats": seats,
+                    "seats": int(seats) if seats.isdigit() else 0,
+                    "seats_display": seats,
                     "url": url,
                     "slots": slot_strings,
                 })
+            
+            # Sort by number of seats (descending)
+            result.sort(key=lambda x: x["seats"], reverse=True)
 
             return render_template(
                 "results.html",
@@ -356,12 +358,17 @@ def search():
             # Exact time search
             available = find_available_rooms(building, user_start, user_end)
 
-            # Sort by room name
-            sorted_items = sorted(available.items(), key=lambda kv: kv[0])
+            # Sort by number of seats (descending)
             result = [
-                {"name": name, "seats": seats, "url": url}
-                for name, (seats, url) in sorted_items
+                {
+                    "name": name,
+                    "seats": int(seats) if seats.isdigit() else 0,
+                    "seats_display": seats,
+                    "url": url
+                }
+                for name, (seats, url) in available.items()
             ]
+            result.sort(key=lambda x: x["seats"], reverse=True)
 
             return render_template(
                 "results.html",

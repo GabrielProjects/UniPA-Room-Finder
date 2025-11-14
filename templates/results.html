@@ -59,7 +59,7 @@
               {% for r in results %}
                 <tr>
                   <td>{{ r.name }}</td>
-                  <td>{{ r.seats }}</td>
+                  <td>{{ r.seats_display }}</td>
                   {% if flexible_mode %}
                     <td>{{ r.slots|join(', ') }}</td>
                   {% endif %}
