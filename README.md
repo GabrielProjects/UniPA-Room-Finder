@@ -1,199 +1,86 @@
-# UnipaTool - Room Finder
+# Unipa Room Finder
 
-Un'applicazione web per trovare aule disponibili presso l'Università di Palermo (Unipa). L'applicazione interroga il sistema ufficiale di prenotazione aule e mostra le aule libere per un periodo specificato.
+Made by Gabriele D'Asta
 
-## 🚀 Live Demo
+A lightweight Flask web app that finds free rooms from the official Unipa calendar. It drives the “Ricerca Avanzata” page with Selenium (headless Chrome), collects rooms, parses events from the room calendars, and shows which rooms are free.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Available-brightgreen)](https://unipa-room-finder.onrender.com)
+## Features
+- Live building list fetched from the official site (Selenium)
+- Exact time search: free rooms for your chosen start → end
+- Flexible search: find any X-hour slot within a broader range (e.g., any 2h between 08:00–15:00)
+- Includes all rooms (no strict regex), filters seats > 0
+- Sorts results by seats (descending)
+- Clean, server-rendered UI with loading overlay
 
-## 📋 Caratteristiche
+## Tech Stack
+- Flask (server, templates)
+- Selenium + headless Chrome (scraping)
+- Gunicorn (production server)
+- Docker (containerized deploy)
+- Render (hosting)
 
-- 🔍 Ricerca aule disponibili per edificio, data e orario
-- 📅 Modalità flessibile: trova qualsiasi slot disponibile di durata specifica
-- 📱 Design responsive (mobile e desktop)
-- ⚡ Performance ottimizzate con caching intelligente
-- 🔄 Aggiornamento automatico degli orari (cache per data)
+## Requirements
+- Python 3.10+
+- Google Chrome installed locally (Selenium Manager auto-installs matching ChromeDriver)
+- Windows/macOS/Linux supported locally
 
-## 🏗️ Architettura
+## Run Locally (Windows PowerShell)
 
-L'applicazione è divisa in due parti:
-
-- **Backend**: Node.js + Express + Puppeteer (API REST)
-- **Frontend**: Vue.js 3 + Vite (SPA)
-
-### Stack Tecnologico
-
-- **Backend**:
-  - Node.js + Express
-  - Puppeteer (web scraping)
-  - node-cache (caching)
-  - axios (HTTP client)
-
-- **Frontend**:
-  - Vue.js 3 (Composition API)
-  - Vite (build tool)
-  - axios (API client)
-
-## 📦 Installazione Locale
-
-### Prerequisiti
-
-- Node.js 18+ e npm
-- Git (opzionale)
-
-### Installazione Automatica
-
-**Windows (PowerShell):**
 ```powershell
-.\setup.ps1
+# 1) Create and activate a virtual environment
+python -m venv .venv ; .\.venv\Scripts\Activate.ps1
+
+# 2) Install dependencies
+pip install -r requirements.txt
+
+# 3) Start the app (dev server)
+python app.py
 ```
 
-**Linux/Mac:**
-```bash
-chmod +x setup.sh
-./setup.sh
-```
+Open http://127.0.0.1:5000
 
-### Installazione Manuale
+Notes:
+- First load may take a few seconds while Selenium fetches buildings.
+- If Chrome is not installed or is blocked by policy, Selenium will fail to start.
 
-**Backend:**
-```bash
-cd backend
-npm install
-npm start
-```
+## Deploy on Render (Docker)
 
-Il backend sarà disponibile su `http://localhost:3000`
+This repo includes `Dockerfile` and `render.yaml` configured for a Docker-based web service on Render.
 
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Steps:
+1) Push this repo to GitHub.
+2) On https://render.com, create a new Web Service connected to this repo.
+3) Render will detect `render.yaml` and build the Docker image.
+4) The app will start with Gunicorn and bind to the port set by Render (`PORT`).
 
-Il frontend sarà disponibile su `http://localhost:5173`
+Free plan (512MB RAM) tips:
+- Chrome runs in memory-optimized headless mode with stability flags.
+- Gunicorn runs with a single worker to reduce RAM.
+- If you still hit OOM, set env var `MALLOC_ARENA_MAX=2` in Render.
 
-### Configurazione
+## Configuration
+- No app-specific environment variables are required.
+- Optional (Render): `MALLOC_ARENA_MAX=2` may reduce allocator memory usage.
 
-Crea un file `.env` nella cartella `frontend`:
+## Project Structure
+- `app.py` — Flask app, routes, Selenium scraping, availability logic
+- `templates/` — HTML templates (Jinja2)
+- `Dockerfile` — Chrome + Python image, memory-friendly config
+- `render.yaml` — Render service definition (Docker)
+- `requirements.txt` — Python dependencies
+- `FindRooms.py` — original CLI script (reference only; not used by the web app)
 
-```env
-VITE_API_URL=http://localhost:3000/api
-```
+## Troubleshooting
+- Failed to load buildings / session errors:
+  - Ensure Chrome is installed (local).
+  - On Render, wait for cold start and retry (Chrome boot can take several seconds).
+  - The app uses headless Chrome with stability and low-memory flags.
+- No results:
+  - Make sure the selected date/time includes open hours and that the site has data for the chosen building.
+- Slow first request:
+  - Selenium + live site requests add startup time; subsequent requests are faster.
 
-## 📁 Struttura Progetto
+## Credits
+- Built by Gabriele D'Asta
 
-```
-UnipaTool/
-├── backend/              # Backend Node.js
-│   ├── src/
-│   │   ├── routes/      # API endpoints
-│   │   ├── scraper/     # Logica scraping
-│   │   ├── cache/       # Sistema caching
-│   │   └── utils/       # Utility functions
-│   ├── server.js        # Entry point
-│   └── package.json
-├── frontend/            # Frontend Vue.js
-│   ├── src/
-│   │   ├── components/  # Componenti Vue
-│   │   ├── services/    # API client
-│   │   └── styles/      # CSS
-│   ├── index.html
-│   └── package.json
-├── docs/                # Documentazione
-└── README.md
-```
-
-## 🔧 Configurazione
-
-### Backend
-
-Variabili d'ambiente (opzionali):
-
-- `PORT`: Porta del server (default: 3000)
-- `CORS_ORIGIN`: Origine permessa per CORS (default: *)
-- `LOG_LEVEL`: Livello di log (default: info)
-
-### Frontend
-
-Variabili d'ambiente:
-
-- `VITE_API_URL`: URL del backend API (default: http://localhost:3000/api)
-
-## 📝 API Endpoints
-
-### GET /api/buildings
-
-Ottiene la lista degli edifici disponibili.
-
-**Response**:
-```json
-{
-  "buildings": ["Edificio 8", "Edificio 15", ...]
-}
-```
-
-### POST /api/search
-
-Cerca aule disponibili.
-
-**Request**:
-```json
-{
-  "building": "Edificio 8",
-  "date": "2025-11-15",
-  "start_time": "14:00",
-  "end_time": "16:00",
-  "flexible_mode": false,
-  "duration": 2
-}
-```
-
-**Response**:
-```json
-{
-  "results": [
-    {
-      "name": "A101",
-      "seats": "50",
-      "url": "https://...",
-      "slots": [] // Solo se flexible_mode = true
-    }
-  ],
-  "total": 5,
-  "flexible_mode": false
-}
-```
-
-### GET /api/health
-
-Health check endpoint.
-
-## 🐛 Troubleshooting
-
-### Backend non si avvia
-
-- Verifica che Node.js 18+ sia installato
-- Controlla che tutte le dipendenze siano installate: `npm install`
-- Verifica i log per errori specifici
-
-### Frontend non si connette al backend
-
-- Verifica che `VITE_API_URL` sia configurato correttamente
-- Controlla che il backend sia in esecuzione
-- Verifica CORS settings nel backend
-
-### Errori di scraping
-
-- Il sito Unipa potrebbe essere temporaneamente non disponibile
-- Verifica la connessione internet
-- Controlla i log del backend per dettagli
-
-## 📄 Licenza
-
-MIT
-
-## 👤 Autore
-
-Creato per facilitare la ricerca di aule disponibili presso l'Università di Palermo.
+This project is for educational purposes and relies on publicly available information from Unipa’s site.
