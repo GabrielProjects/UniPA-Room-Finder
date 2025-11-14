@@ -21,29 +21,29 @@ app.secret_key = "change-me"  # for flash messages
 
 
 def _build_driver() -> webdriver.Chrome:
-    """Create a memory-optimized headless Chrome WebDriver for 512MB limit."""
+    """Create a memory-optimized headless Chrome WebDriver."""
     options = Options()
     options.add_argument("--log-level=3")
     options.add_argument("--headless=new")  # Use new headless mode (less memory)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--disable-web-security")
-    options.add_argument("--disable-features=VizDisplayCompositor")
     options.add_argument("--disable-extensions")
-    options.add_argument("--disable-plugins")
     options.add_argument("--disable-images")  # Don't load images (saves memory)
-    options.add_argument("--disable-javascript")  # Disable JS (we only need DOM)
-    options.add_argument("--memory-pressure-off")
-    options.add_argument("--max_old_space_size=128")  # Limit V8 memory to 128MB
-    options.add_argument("--single-process")  # Force single process mode
+    
+    # Only apply these on Linux (not Windows)
+    if os.name != "nt":
+        options.add_argument("--disable-web-security")
+        options.add_argument("--disable-features=VizDisplayCompositor")
+        options.add_argument("--single-process")  # Only on Linux containers
+        options.add_argument("--max_old_space_size=128")
+    
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
     
     # Block resource-heavy content
     prefs = {
         "profile.default_content_settings.popups": 0,
         "profile.managed_default_content_settings.images": 2,  # Block images
-        "profile.managed_default_content_settings.media_stream": 2,  # Block media
     }
     options.add_experimental_option("prefs", prefs)
 
