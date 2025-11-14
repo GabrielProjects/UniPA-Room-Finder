@@ -1,0 +1,133 @@
+@startuml Data Flow Diagram
+!theme plain
+skinparam linetype ortho
+skinparam componentStyle rectangle
+
+title Flusso Dati UnipaTool - Data Transformation
+
+start
+
+:User Input;
+note right
+  - Building name
+  - Date (YYYY-MM-DD)
+  - Start time (HH:MM)
+  - End time (HH:MM)
+  - Optional: Flexible mode
+  - Optional: Duration (hours)
+end note
+
+:Parse Input;
+:user_start = datetime
+user_end = datetime;
+
+:get_buildings()?;
+if (First load) then (yes)
+  :Scrape Unipa Website;
+  :Extract Building Options;
+  :Cache Buildings List;
+  :List[str] buildings;
+else (no)
+  :Use Cached Buildings;
+endif
+
+:get_rooms_for_building(building);
+
+:Initialize Selenium WebDriver;
+:Navigate to BASE_URL;
+:Click "Ricerca Avanzata";
+:Select Building;
+:Click "Cerca";
+
+:Extract Rooms from Page 1;
+note right
+  Format: {room_name: (seats, url)}
+  Filter: ^[A-Z]\\d{3}$ pattern
+  Filter: seats > 0
+end note
+
+repeat
+  :Extract Current Page Rooms;
+  :Add to rooms_dict;
+repeat while (More pages?) is (yes)
+->no;
+
+:Dict[str, Tuple[str, str]]\nrooms_dict;
+note right
+  Key: Room name (e.g., "A101")
+  Value: (seats, calendar_url)
+end note
+
+if (Search Mode?) then (Exact Time)
+  
+  :find_available_rooms();
+  
+  partition "Per ogni aula" {
+    :GET room calendar URL;
+    :HTML Response;
+    :parse_events_from_html(html);
+    
+    :Extract Events;
+    note right
+      Regex pattern:
+      start: new Date(ms)
+      end: new Date(ms)
+    end note
+    
+    :List[Tuple[datetime, datetime]]\nevents;
+    
+    :is_room_free(events, user_start, user_end);
+    
+    if (Free?) then (yes)
+      :Add to available_rooms;
+    else (no)
+      :Skip room;
+    endif
+  }
+  
+  :Dict[str, Tuple[str, str]]\navailable_rooms;
+  
+else (Flexible Slots)
+  
+  :find_flexible_slots();
+  
+  partition "Per ogni aula" {
+    :GET room calendar URL;
+    :HTML Response;
+    :parse_events_from_html(html);
+    
+    :List[Tuple[datetime, datetime]]\nevents;
+    
+    :Find Free Slots;
+    note right
+      Scan range_start to range_end
+      Check slots of duration_hours
+      Step: 30 minutes
+    end note
+    
+    if (Slots found?) then (yes)
+      :Add room with slots;
+      :List[Tuple[datetime, datetime]]\nfree_slots;
+    else (no)
+      :Skip room;
+    endif
+  }
+  
+  :Dict[str, Tuple[str, str, List]]\nresults;
+  
+endif
+
+:Format Results for Template;
+note right
+  - Sort by room name
+  - Format time slots (if flexible)
+  - Prepare dict for Jinja2
+end note
+
+:Render results.html;
+:Display Results to User;
+
+stop
+
+@enduml
+

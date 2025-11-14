@@ -1,0 +1,118 @@
+@startuml Components Diagram
+!theme plain
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+title Componenti UnipaTool - Moduli e Funzioni
+
+package "app.py" {
+  component "Flask App" as FlaskApp {
+    [app: Flask] as AppInstance
+    [secret_key] as SecretKey
+  }
+  
+  component "Route Handlers" as Routes {
+    [index()] as IndexRoute
+    [search()] as SearchRoute
+  }
+  
+  component "WebDriver Functions" as WebDriverFuncs {
+    [_build_driver()] as BuildDriver
+  }
+  
+  component "Building Functions" as BuildingFuncs {
+    [get_buildings()] as GetBuildings
+  }
+  
+  component "Room Functions" as RoomFuncs {
+    [get_rooms_for_building()] as GetRooms
+    [_extract_current_page_rooms()] as ExtractRooms
+  }
+  
+  component "Calendar Parser" as CalendarParser {
+    [parse_events_from_html()] as ParseEvents
+  }
+  
+  component "Availability Logic" as AvailabilityLogic {
+    [is_room_free()] as IsFree
+    [find_available_rooms()] as FindAvailable
+    [find_flexible_slots()] as FindFlexible
+  }
+  
+  component "Cache" as Cache {
+    [_cached_buildings] as CachedBuildings
+  }
+}
+
+package "Templates" {
+  component "index.html" as IndexTemplate
+  component "results.html" as ResultsTemplate
+}
+
+package "External Libraries" {
+  [Flask] as FlaskLib
+  [Selenium] as SeleniumLib
+  [Requests] as RequestsLib
+}
+
+package "External System" {
+  [Unipa Website] as UnipaSite
+}
+
+' Internal connections
+AppInstance --> IndexRoute
+AppInstance --> SearchRoute
+IndexRoute --> GetBuildings
+IndexRoute --> CachedBuildings
+IndexRoute --> IndexTemplate
+SearchRoute --> FindAvailable
+SearchRoute --> FindFlexible
+SearchRoute --> ResultsTemplate
+
+GetBuildings --> BuildDriver
+GetBuildings --> UnipaSite
+GetRooms --> BuildDriver
+GetRooms --> ExtractRooms
+GetRooms --> UnipaSite
+FindAvailable --> GetRooms
+FindAvailable --> ParseEvents
+FindAvailable --> IsFree
+FindAvailable --> RequestsLib
+FindFlexible --> GetRooms
+FindFlexible --> ParseEvents
+FindFlexible --> IsFree
+FindFlexible --> RequestsLib
+
+BuildDriver --> SeleniumLib
+ParseEvents --> RequestsLib
+RequestsLib --> UnipaSite
+
+' Dependencies
+FlaskApp ..> FlaskLib : uses
+WebDriverFuncs ..> SeleniumLib : uses
+AvailabilityLogic ..> RequestsLib : uses
+
+note right of GetBuildings
+  Recupera lista edifici
+  dal dropdown del sito Unipa
+end note
+
+note right of GetRooms
+  Scraping paginato delle aule
+  per un edificio specifico
+end note
+
+note right of ParseEvents
+  Estrae eventi calendario
+  da HTML usando regex
+  Pattern: start/end Date(ms)
+end note
+
+note right of FindFlexible
+  Cerca slot disponibili
+  di durata specifica
+  all'interno di un range
+end note
+
+@enduml
+

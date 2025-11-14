@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: unipatool-backend
+    env: node
+    plan: free
+    region: frankfurt
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        value: https://gabrielprojects.github.io
+        # IMPORTANT: Replace YOUR_USERNAME with your GitHub username
+        # Or set to * for development (not recommended for production)
+      - key: LOG_LEVEL
+        value: info
+      - key: CONCURRENCY
+        value: 25
+        # Number of parallel requests for room checking
+      - key: MAX_CONCURRENT_REQUESTS
+        value: 30
+        # Max HTTP connections for axios
+      - key: DEBUG
+        value: false
+        # Set to true for detailed debug logs
+

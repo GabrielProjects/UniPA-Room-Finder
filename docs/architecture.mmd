@@ -1,0 +1,43 @@
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#2563eb', 'primaryTextColor':'#fff', 'primaryBorderColor':'#22d3ee', 'lineColor':'#22d3ee', 'secondaryColor':'#111827', 'tertiaryColor':'#0b1220'}}}%%
+graph TB
+    subgraph "Presentation Layer"
+        IndexPage[index.html]
+        ResultsPage[results.html]
+        Routes[Flask Routes]
+    end
+
+    subgraph "Application Layer"
+        Handlers[Route Handlers]
+        BusinessLogic[Business Logic]
+        WebDriverMgr[WebDriver Manager]
+        Parser[Data Parser]
+    end
+
+    subgraph "Data Access Layer"
+        Selenium[Selenium WebDriver]
+        Requests[HTTP Requests]
+    end
+
+    subgraph "External Services"
+        UnipaSite[Unipa Website]
+        CalendarPages[(Room Calendar Pages)]
+    end
+
+    IndexPage --> Routes
+    ResultsPage --> Routes
+    Routes --> Handlers
+    Handlers --> BusinessLogic
+    BusinessLogic --> WebDriverMgr
+    BusinessLogic --> Parser
+    WebDriverMgr --> Selenium
+    BusinessLogic --> Requests
+    Selenium --> UnipaSite
+    Requests --> CalendarPages
+    UnipaSite --> CalendarPages
+
+    style IndexPage fill:#2563eb,stroke:#22d3ee,stroke-width:2px
+    style ResultsPage fill:#2563eb,stroke:#22d3ee,stroke-width:2px
+    style BusinessLogic fill:#22d3ee,stroke:#2563eb,stroke-width:2px
+    style Parser fill:#22d3ee,stroke:#2563eb,stroke-width:2px
+    style UnipaSite fill:#7c3aed,stroke:#a78bfa,stroke-width:2px
+

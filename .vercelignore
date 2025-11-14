@@ -1,0 +1,10 @@
+node_modules
+frontend
+__pycache__
+*.py
+templates
+docs
+.git
+.env
+.env.local
+

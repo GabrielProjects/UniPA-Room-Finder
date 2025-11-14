@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unipa Room Finder</title>
+    <script>
+      // Redirect to index.html for SPA routing
+      // This is needed for GitHub Pages to handle client-side routing
+      var path = window.location.pathname;
+      var search = window.location.search;
+      var hash = window.location.hash;
+      var base = '/UnipaTool';
+      
+      // Remove base path if present
+      if (path.startsWith(base)) {
+        path = path.substring(base.length);
+      }
+      
+      // Redirect to index.html with the path preserved
+      window.location.replace(base + '/index.html' + path + search + hash);
+    </script>
+  </head>
+  <body>
+    <p>Redirecting...</p>
+  </body>
+</html>
+

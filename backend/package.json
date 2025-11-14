@@ -1,0 +1,22 @@
+{
+  "name": "unipatool-backend",
+  "version": "1.0.0",
+  "description": "Backend API for UnipaTool - Room finder",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["unipa", "room-finder", "scraper"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "puppeteer": "^21.5.0",
+    "axios": "^1.6.2",
+    "node-cache": "^5.1.2"
+  }
+}
+

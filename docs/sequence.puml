@@ -1,0 +1,129 @@
+@startuml Sequence Diagram
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam roundcorner 20
+
+title Flusso di Ricerca Aule - Sequence Diagram
+
+actor User as U
+participant "Browser" as B
+participant "Flask App\n(app.py)" as F
+participant "Business Logic" as BL
+participant "Selenium\nWebDriver" as S
+participant "Unipa Website" as UW
+participant "Requests\nLibrary" as R
+
+== Caricamento Pagina Iniziale ==
+
+U -> B: Accede a http://127.0.0.1:5000/
+B -> F: GET /
+activate F
+F -> BL: get_buildings()
+activate BL
+BL -> S: _build_driver()
+activate S
+S -> S: Crea Chrome headless
+BL -> S: Navigate to BASE_URL
+S -> UW: GET aulaCalendar.seam
+activate UW
+UW --> S: HTML page
+deactivate UW
+BL -> S: Click "Ricerca Avanzata"
+S -> UW: Submit form
+UW --> S: Advanced search page
+BL -> S: Extract building options
+S --> BL: List[building_names]
+BL -> S: driver.quit()
+deactivate S
+BL --> F: buildings list
+F -> F: Cache buildings
+F -> B: Render index.html
+deactivate BL
+B --> U: Form con lista edifici
+deactivate F
+
+== Ricerca Aule Disponibili ==
+
+U -> B: Compila form (building, date, time)
+U -> B: Submit form
+B -> F: POST /search
+activate F
+F -> F: Parse form data
+F -> F: Validate input
+F -> BL: find_available_rooms(building, start, end)
+activate BL
+
+== Scraping Aule ==
+
+BL -> BL: get_rooms_for_building(building)
+BL -> S: _build_driver()
+activate S
+S -> S: Crea Chrome headless
+BL -> S: Navigate to BASE_URL
+S -> UW: GET aulaCalendar.seam
+activate UW
+UW --> S: HTML page
+deactivate UW
+BL -> S: Click "Ricerca Avanzata"
+S -> UW: Submit form
+UW --> S: Advanced search page
+BL -> S: Select building
+BL -> S: Click "Cerca"
+S -> UW: Submit search
+UW --> S: Results page 1
+BL -> S: Extract rooms from page
+S --> BL: rooms_dict (page 1)
+
+loop Paginazione
+  BL -> S: Check next button
+  alt Next page exists
+    BL -> S: Click next
+    S -> UW: Load next page
+    UW --> S: Results page N
+    BL -> S: Extract rooms from page
+    S --> BL: rooms_dict (page N)
+  else No more pages
+    BL -> BL: Break loop
+  end
+end
+
+BL -> S: driver.quit()
+deactivate S
+BL --> BL: Complete rooms_dict
+
+== Verifica Disponibilità ==
+
+loop Per ogni aula
+  BL -> R: GET room_calendar_url
+  activate R
+  R -> UW: HTTP GET request
+  activate UW
+  UW --> R: HTML calendar page
+  deactivate UW
+  R --> BL: HTML content
+  deactivate R
+  
+  BL -> BL: parse_events_from_html(html)
+  BL -> BL: Extract Date(start_ms, end_ms)
+  BL -> BL: Convert to datetime tuples
+  BL -> BL: is_room_free(events, user_start, user_end)
+  
+  alt Aula libera
+    BL -> BL: Add to available_rooms
+  else Aula occupata
+    BL -> BL: Skip room
+  end
+end
+
+BL --> F: available_rooms dict
+deactivate BL
+
+== Rendering Risultati ==
+
+F -> F: Format results for template
+F -> B: Render results.html
+B --> U: Pagina risultati con aule disponibili
+deactivate F
+
+@enduml
+

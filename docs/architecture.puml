@@ -1,0 +1,67 @@
+@startuml Architecture Diagram
+!theme plain
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+title Architettura UnipaTool - Layer Architecture
+
+package "Presentation Layer" {
+  [index.html] as IndexPage
+  [results.html] as ResultsPage
+  [Flask Routes] as Routes
+}
+
+package "Application Layer" {
+  [Route Handlers] as Handlers
+  [Business Logic] as BusinessLogic
+  [WebDriver Manager] as WebDriverMgr
+  [Data Parser] as Parser
+}
+
+package "Data Access Layer" {
+  [Selenium WebDriver] as Selenium
+  [HTTP Requests] as Requests
+}
+
+package "External Services" {
+  [Unipa Website] as UnipaSite
+  database "Room Calendar\nPages" as CalendarPages
+}
+
+' Presentation Layer connections
+IndexPage --> Routes : "GET /"
+ResultsPage --> Routes : "POST /search"
+Routes --> Handlers
+
+' Application Layer connections
+Handlers --> BusinessLogic : "Calls"
+BusinessLogic --> WebDriverMgr : "Creates"
+BusinessLogic --> Parser : "Uses"
+WebDriverMgr --> Selenium : "Manages"
+
+' Data Access Layer connections
+Selenium --> UnipaSite : "Scrapes"
+Requests --> CalendarPages : "Fetches HTML"
+BusinessLogic --> Requests : "Uses"
+
+' External Services
+UnipaSite --> CalendarPages : "Serves"
+
+note right of BusinessLogic
+  **Funzioni principali:**
+  - get_buildings()
+  - get_rooms_for_building()
+  - find_available_rooms()
+  - find_flexible_slots()
+  - is_room_free()
+end note
+
+note right of Parser
+  **Funzioni:**
+  - parse_events_from_html()
+  - Estrae eventi calendario
+  - Converte timestamp
+end note
+
+@enduml
+
