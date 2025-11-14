@@ -4,9 +4,7 @@ Un'applicazione web per trovare aule disponibili presso l'Università di Palermo
 
 ## 🚀 Live Demo
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Available-brightgreen)](https://YOUR_USERNAME.github.io/UnipaTool/)
-
-**Nota**: Sostituisci `YOUR_USERNAME` con il tuo username GitHub nel file `backend/render.yaml` e nelle configurazioni.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Available-brightgreen)](https://unipa-room-finder.onrender.com)
 
 ## 📋 Caratteristiche
 
@@ -83,10 +81,6 @@ Crea un file `.env` nella cartella `frontend`:
 ```env
 VITE_API_URL=http://localhost:3000/api
 ```
-
-## 🚀 Deploy
-
-`https://unipa-room-finder.onrender.com`
 
 ## 📁 Struttura Progetto
 
