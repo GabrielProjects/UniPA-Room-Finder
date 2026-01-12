@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }} – Occupancy Archives</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#94a3b8;--accent:#22d3ee;--btn:#2563eb}
+      *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#0b1220,#0a0f1a);color:var(--text)}
+      .wrap{max-width:860px;margin:40px auto;padding:0 16px}
+      .card{background:rgba(17,24,39,.8);backdrop-filter:blur(6px);border:1px solid #1f2937;border-radius:16px;padding:24px}
+      h1{font-size:24px;margin:0 0 16px;color:#f3f4f6}
+      .byline{font-size:12px;color:#94a3b8;font-weight:500;margin-left:10px}
+      p{color:var(--muted);margin:0 0 16px}
+      .nav{display:flex;gap:12px;margin-bottom:16px}
+      a.btn{display:inline-block;padding:10px 14px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#22d3ee);color:white;text-decoration:none;font-weight:600}
+      table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:16px}
+      th{font-size:12px;text-align:left;color:#9ca3af;padding:4px 8px}
+      td{background:#0b1420;border:1px solid #1f2937;padding:10px 12px;color:#e5e7eb}
+      td:first-child{border-top-left-radius:10px;border-bottom-left-radius:10px}
+      td:last-child{border-top-right-radius:10px;border-bottom-right-radius:10px}
+      .empty{padding:12px 0;color:#94a3b8}
+      a{color:#22d3ee;text-decoration:none;font-weight:500}
+      a:hover{text-decoration:underline}
+      footer{margin-top:18px;font-size:12px;color:#94a3b8;text-align:center}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>📁 Occupancy Archives <span class="byline">· Made by Gabriele D'Asta</span></h1>
+        <p>Retrieve previously generated occupancy boards.</p>
+
+        <div class="nav">
+          <a href="{{ url_for('occupancy') }}" class="btn">← Back to Occupancy</a>
+        </div>
+
+        {% if archives %}
+          <div style="font-size:12px;color:#9ca3af;margin-bottom:12px">Last {{ archives|length }} boards (auto-cleanup keeps 2 max)</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50%">Building & Date</th>
+                <th style="width:30%">Generated</th>
+                <th style="width:20%">Size</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for archive in archives %}
+                <tr>
+                  <td><a href="{{ url_for('load_archive', archive_file=archive.filename) }}">{{ archive.filename.replace('occupancy_', '').replace('.json', '') }}</a></td>
+                  <td>{{ archive.timestamp }}</td>
+                  <td>{{ "%.1f"|format(archive.size / 1024) }} KB</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty">No archives yet. Generate a new occupancy board to create one.</div>
+        {% endif %}
+
+        <footer>Archives are stored locally and cleaned automatically when exceeding the limit.</footer>
+      </div>
+    </div>
+  </body>
+</html>

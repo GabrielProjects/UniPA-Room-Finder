@@ -1,8 +1,11 @@
 import os
 import re
 import time
+import json
+import gc
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
+from pathlib import Path
 
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -18,6 +21,11 @@ BASE_URL = "https://offweb.unipa.it/offweb/public/aula/aulaCalendar.seam"
 
 app = Flask(__name__)
 app.secret_key = "change-me"  # for flash messages
+
+# Archive configuration
+ARCHIVE_DIR = Path("occupancy_archives")
+ARCHIVE_DIR.mkdir(exist_ok=True)
+MAX_ARCHIVES = 2
 
 
 def _build_driver() -> webdriver.Chrome:
@@ -407,6 +415,174 @@ def search():
     except Exception as e:
         flash(f"Search failed: {e}", "error")
         return redirect(url_for("index"))
+
+
+# ====== Archive Management ======
+
+def cleanup_old_archives():
+    """Keep only the last MAX_ARCHIVES (2) and delete older ones."""
+    archives = sorted(ARCHIVE_DIR.glob("occupancy_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for archive in archives[MAX_ARCHIVES:]:
+        archive.unlink()
+
+
+def save_occupancy_archive(building: str, occupancy_data: Dict) -> str:
+    """Save occupancy data to archive and clean up old ones. Return archive filename."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"occupancy_{building}_{timestamp}.json"
+    filepath = ARCHIVE_DIR / filename
+    
+    with open(filepath, "w") as f:
+        json.dump(occupancy_data, f, indent=2, default=str)
+    
+    cleanup_old_archives()
+    return filename
+
+
+def get_occupancy_data(building_text: str, target_date: datetime) -> Dict[str, List[Dict]]:
+    """
+    Generate occupancy board for a building on a given date.
+    Returns: {room_name: [{hour: int, occupied: bool, events: [...]}, ...]}
+    """
+    rooms = get_rooms_for_building(building_text)
+    occupancy: Dict[str, List[Dict]] = {}
+    
+    day_start = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end = day_start + timedelta(days=1)
+    
+    for room_name, (seats, url) in rooms.items():
+        try:
+            resp = requests.get(url, timeout=15)
+            if resp.status_code != 200:
+                continue
+            
+            events = parse_events_from_html(resp.text)
+            
+            # Build hourly occupancy for this room
+            hourly = []
+            for hour in range(0, 24):
+                slot_start = day_start + timedelta(hours=hour)
+                slot_end = slot_start + timedelta(hours=1)
+                
+                occupied_events = [e for e in events if e[0] < slot_end and slot_start < e[1]]
+                is_occupied = len(occupied_events) > 0
+                
+                hourly.append({
+                    "hour": hour,
+                    "occupied": is_occupied,
+                    "events": [(e[0].strftime("%H:%M"), e[1].strftime("%H:%M")) for e in occupied_events]
+                })
+            
+            occupancy[room_name] = hourly
+            
+        except Exception:
+            continue
+    
+    return occupancy
+
+
+# ====== Flask occupancy routes ======
+
+@app.route("/occupancy", methods=["GET", "POST"])
+def occupancy():
+    global _cached_buildings
+    if not _cached_buildings:
+        try:
+            _cached_buildings = get_buildings()
+        except Exception as e:
+            flash(f"Failed to load buildings: {e}", "error")
+            _cached_buildings = []
+    
+    if request.method == "GET":
+        return render_template("occupancy.html", title=APP_TITLE, buildings=_cached_buildings)
+    
+    # POST: Generate occupancy board
+    try:
+        building = request.form.get("building", "").strip()
+        date_str = request.form.get("date", "").strip()
+        
+        if not (building and date_str):
+            flash("Please select a building and date.", "error")
+            return redirect(url_for("occupancy"))
+        
+        target_date = datetime.strptime(date_str, "%Y-%m-%d")
+        
+        # Generate occupancy data
+        occupancy_data = get_occupancy_data(building, target_date)
+        
+        if not occupancy_data:
+            flash("No rooms found or no data available for this building.", "error")
+            return redirect(url_for("occupancy"))
+        
+        # Archive the results
+        archive_file = save_occupancy_archive(building, occupancy_data)
+        
+        # Sort rooms by name
+        sorted_rooms = sorted(occupancy_data.keys())
+        
+        return render_template(
+            "occupancy_board.html",
+            title=APP_TITLE,
+            building=building,
+            date=date_str,
+            occupancy=occupancy_data,
+            rooms=sorted_rooms,
+            archive_file=archive_file,
+        )
+    
+    except Exception as e:
+        flash(f"Occupancy generation failed: {e}", "error")
+        return redirect(url_for("occupancy"))
+
+
+@app.route("/occupancy/archives", methods=["GET"])
+def occupancy_archives():
+    """List all occupancy archives."""
+    archives = sorted(ARCHIVE_DIR.glob("occupancy_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    archive_list = [
+        {
+            "filename": a.name,
+            "timestamp": datetime.fromtimestamp(a.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "size": a.stat().st_size,
+        }
+        for a in archives
+    ]
+    return render_template("occupancy_archives.html", title=APP_TITLE, archives=archive_list)
+
+
+@app.route("/occupancy/load/<archive_file>", methods=["GET"])
+def load_archive(archive_file: str):
+    """Load and display a specific archive."""
+    filepath = ARCHIVE_DIR / archive_file
+    
+    # Security: only allow files in the archive dir and with proper naming
+    if not filepath.exists() or not archive_file.startswith("occupancy_") or not archive_file.endswith(".json"):
+        flash("Archive not found.", "error")
+        return redirect(url_for("occupancy_archives"))
+    
+    try:
+        with open(filepath, "r") as f:
+            occupancy_data = json.load(f)
+        
+        # Extract building and date from filename
+        parts = archive_file.replace("occupancy_", "").replace(".json", "").rsplit("_", 2)
+        building = parts[0] if parts else "Unknown"
+        
+        sorted_rooms = sorted(occupancy_data.keys())
+        
+        return render_template(
+            "occupancy_board.html",
+            title=APP_TITLE,
+            building=building,
+            date="Archived",
+            occupancy=occupancy_data,
+            rooms=sorted_rooms,
+            archive_file=archive_file,
+            is_archive=True,
+        )
+    except Exception as e:
+        flash(f"Failed to load archive: {e}", "error")
+        return redirect(url_for("occupancy_archives"))
 
 
 if __name__ == "__main__":

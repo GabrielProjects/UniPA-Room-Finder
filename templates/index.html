@@ -35,6 +35,9 @@
       .flex-mode input[type="checkbox"]{width:auto}
       .duration-input{margin-top:8px;display:none}
       .duration-input.show{display:block}
+      .nav-links{display:flex;gap:12px;margin-bottom:16px}
+      .nav-links a{display:inline-block;padding:8px 12px;background:#0b1220;border:1px solid #1f2937;border-radius:10px;color:#22d3ee;text-decoration:none;font-size:12px;font-weight:500}
+      .nav-links a:hover{background:#111827}
     </style>
   </head>
   <body>
@@ -47,6 +50,10 @@
       <div class="card">
         <h1>🔎 {{ title }} <span class="byline">· Made by Gabriele D'Asta</span></h1>
         <p>Find free rooms between your times. Data comes from the official Unipa calendar.</p>
+
+        <div class="nav-links">
+          <a href="{{ url_for('occupancy') }}">📊 Occupancy Board</a>
+        </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
