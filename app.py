@@ -111,17 +111,27 @@ def get_buildings() -> List[str]:
 def _extract_current_page_rooms(driver: webdriver.Chrome) -> Dict[str, Tuple[str, str]]:
     """Given the current results table page, return room_dict {name: (seats, link)}."""    
     room_dict: Dict[str, Tuple[str, str]] = {}
-    rows = driver.find_elements(By.CSS_SELECTOR, "#ricercaAula\\:aulaList tbody tr")
+    
+    # Re-locate rows fresh each time to avoid stale references
+    try:
+        rows = driver.find_elements(By.CSS_SELECTOR, "#ricercaAula\\:aulaList tbody tr")
+    except Exception:
+        return room_dict
+    
     for row in rows:
-        cols = row.find_elements(By.TAG_NAME, "td")
-        if len(cols) == 3:
-            room_name = cols[0].text.strip()
-            seats = cols[1].text.strip()
-            link = cols[0].find_element(By.TAG_NAME, "a").get_attribute("href")
+        try:
+            cols = row.find_elements(By.TAG_NAME, "td")
+            if len(cols) == 3:
+                room_name = cols[0].text.strip()
+                seats = cols[1].text.strip()
+                link = cols[0].find_element(By.TAG_NAME, "a").get_attribute("href")
 
-            # Include all rooms with seats > 0
-            if seats and seats != "0" and room_name:
-                room_dict[room_name] = (seats, link)
+                # Include all rooms with seats > 0
+                if seats and seats != "0" and room_name:
+                    room_dict[room_name] = (seats, link)
+        except Exception:
+            # Skip stale/invalid rows
+            continue
     return room_dict
 def get_rooms_for_building(building_text: str) -> Dict[str, Tuple[str, str]]:
     """Run the site search for a building and return rooms mapping {room: (seats, url)}."""
@@ -147,20 +157,32 @@ def get_rooms_for_building(building_text: str) -> Dict[str, Tuple[str, str]]:
 
         # Collect across pagination
         room_dict: Dict[str, Tuple[str, str]] = {}
-        while True:
+        page_num = 0
+        max_pages = 50  # Safety limit
+        
+        while page_num < max_pages:
             # current page
             room_dict.update(_extract_current_page_rooms(driver))
 
             # try next page
             try:
+                # Re-locate the next button fresh to avoid stale reference
                 next_btn = driver.find_element(
                     By.XPATH, "//td[contains(@class, 'rich-datascr-button') and text()='»']"
                 )
                 if "rich-datascr-button-dsbld" in next_btn.get_attribute("class"):
                     break
+                
+                # Click and wait for table refresh
                 next_btn.click()
-                time.sleep(0.3)  # Shorter sleep
+                time.sleep(0.5)  # Allow DOM update
+                
+                # Wait for table to be present after navigation
                 wait.until(EC.presence_of_element_located((By.ID, "ricercaAula:aulaList")))
+                
+                # Extra wait for stability
+                time.sleep(0.2)
+                page_num += 1
             except Exception:
                 break
 
